@@ -140,7 +140,7 @@ public class Poacher : MonoBehaviour
     private IEnumerator AutoRecover()
     {
         float timer = 0f;
-        float recoveryTime = 5f;
+        float recoveryTime = 7f;
 
         while (timer < recoveryTime)
         {
