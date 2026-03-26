@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 4679384051856764877}
   - component: {fileID: 1979486525644360508}
   - component: {fileID: 1916346967089171824}
+  - component: {fileID: -1900350606214067856}
   m_Layer: 0
   m_Name: Poacher
   m_TagString: Poacher
@@ -112,10 +113,25 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d60753be08e2f5840a84b74d966d2483, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  health: 50
+  maxHits: 1
   attackRange: 2
   walkSpeed: 2
   anim: {fileID: 5574471407332570399}
+  healthBarPrefab: {fileID: 3941991205721452165, guid: a63b2c731d3d81e458b28846533cf95c, type: 3}
+  stunIndicatorPrefab: {fileID: 4830472746570923151, guid: 417ad44c79535bf438d83890fb95303f, type: 3}
+--- !u!114 &-1900350606214067856
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8788755265856915521}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9f54a7f4681f6049848171235722bc4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  tier: 0
 --- !u!1001 &5116771299926132808
 PrefabInstance:
   m_ObjectHideFlags: 0

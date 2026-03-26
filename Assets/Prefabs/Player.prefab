@@ -310,9 +310,10 @@ MonoBehaviour:
   sprintSpeed: 12
   mouseSensitivity: 2
   playerCamera: {fileID: 2506642999387564999}
+  holdEText: {fileID: 0}
+  arrestProgressBar: {fileID: 0}
   arrestRange: 3
   arrestHoldTime: 2
-  arrestProgressBar: {fileID: 0}
 --- !u!54 &5357889251860976876
 Rigidbody:
   m_ObjectHideFlags: 0

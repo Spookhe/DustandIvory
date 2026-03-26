@@ -6,8 +6,11 @@ using System.Collections;
 [RequireComponent(typeof(Animator))]
 public class Poacher : MonoBehaviour
 {
+    [Header("Stun System")]
+    public int maxHits = 1;
+    private int currentHits = 0;
+
     [Header("Stats")]
-    public float health = 50f;
     public float attackRange = 2f;
     public float walkSpeed = 2f;
 
@@ -17,8 +20,14 @@ public class Poacher : MonoBehaviour
     private NavMeshAgent agent;
     private Transform targetAnimal;
     private bool knockedOut = false;
-
     private Coroutine recoveryCoroutine;
+
+    [Header("UI / Indicators")]
+    public GameObject healthBarPrefab;
+    public GameObject stunIndicatorPrefab;
+
+    private WorldHealthBar currentHealthBar;
+    private StunIndicator currentStunIndicator;
 
     void Awake()
     {
@@ -26,30 +35,55 @@ public class Poacher : MonoBehaviour
         if (anim == null) anim = GetComponent<Animator>();
         agent.speed = walkSpeed;
 
-        // Register poacher for mission counters
         MissionController.Instance?.RegisterPoacher();
     }
 
     void Start()
     {
         FindNextAnimal();
+
+        // HEALTH BAR
+        if (healthBarPrefab != null)
+        {
+            GameObject hb = Instantiate(healthBarPrefab);
+            currentHealthBar = hb.GetComponent<WorldHealthBar>();
+
+            if (currentHealthBar != null)
+            {
+                currentHealthBar.target = this.transform;
+
+                // CREATE SEGMENTS
+                currentHealthBar.CreateSegments(maxHits);
+
+                // SET FULL HEALTH
+                currentHealthBar.SetHealth(maxHits);
+            }
+        }
+
+        // STUN INDICATOR
+        if (stunIndicatorPrefab != null)
+        {
+            GameObject si = Instantiate(stunIndicatorPrefab);
+            currentStunIndicator = si.GetComponent<StunIndicator>();
+
+            if (currentStunIndicator != null)
+            {
+                currentStunIndicator.target = this.transform;
+                currentStunIndicator.SetStunned(false);
+            }
+        }
     }
 
     void Update()
     {
         if (knockedOut) return;
 
-        // If current target is gone, find the next closest animal
         if (targetAnimal == null)
         {
             FindNextAnimal();
-
             if (targetAnimal == null)
             {
-                // No animals left, stop moving/attacking
-                if (agent.isOnNavMesh)
-                    agent.isStopped = true;
-
+                if (agent.isOnNavMesh) agent.isStopped = true;
                 anim.SetBool("isWalking", false);
                 anim.SetBool("isAttacking", false);
                 return;
@@ -70,7 +104,7 @@ public class Poacher : MonoBehaviour
             if (a != null)
                 a.StartPoaching();
             else
-                targetAnimal = null; // Animal destroyed, find next
+                targetAnimal = null;
         }
         else
         {
@@ -82,38 +116,18 @@ public class Poacher : MonoBehaviour
         }
     }
 
-    private void FindNextAnimal()
-    {
-        GameObject[] animals = GameObject.FindGameObjectsWithTag("Animal");
-
-        if (animals.Length == 0)
-        {
-            targetAnimal = null;
-            return;
-        }
-
-        float closestDistance = Mathf.Infinity;
-        Transform closest = null;
-
-        foreach (GameObject a in animals)
-        {
-            float dist = Vector3.Distance(transform.position, a.transform.position);
-            if (dist < closestDistance)
-            {
-                closestDistance = dist;
-                closest = a.transform;
-            }
-        }
-
-        targetAnimal = closest;
-    }
-
     public void TakeTranquilizer(float amount)
     {
         if (knockedOut) return;
 
-        health -= amount;
-        if (health <= 0)
+        currentHits++;
+
+        int remaining = maxHits - currentHits;
+
+        if (currentHealthBar != null)
+            currentHealthBar.SetHealth(remaining);
+
+        if (currentHits >= maxHits)
             KnockOut();
     }
 
@@ -133,7 +147,9 @@ public class Poacher : MonoBehaviour
         anim.SetBool("isAttacking", false);
         anim.SetBool("isKnockedOut", true);
 
-        // Start automatic recovery
+        if (currentStunIndicator != null)
+            currentStunIndicator.SetStunned(true);
+
         recoveryCoroutine = StartCoroutine(AutoRecover());
     }
 
@@ -164,12 +180,18 @@ public class Poacher : MonoBehaviour
             agent.isStopped = false;
         }
 
-        if (anim != null)
-        {
-            anim.SetBool("isKnockedOut", false);
-            anim.SetBool("isWalking", true);
-            anim.SetBool("isAttacking", false);
-        }
+        anim.SetBool("isKnockedOut", false);
+        anim.SetBool("isWalking", true);
+        anim.SetBool("isAttacking", false);
+
+        if (currentStunIndicator != null)
+            currentStunIndicator.SetStunned(false);
+
+        // RESET
+        currentHits = 0;
+
+        if (currentHealthBar != null)
+            currentHealthBar.SetHealth(maxHits);
 
         FindNextAnimal();
     }
@@ -178,12 +200,16 @@ public class Poacher : MonoBehaviour
     {
         if (!knockedOut) return;
 
-        // Stop automatic recovery if player arrests
         if (recoveryCoroutine != null)
             StopCoroutine(recoveryCoroutine);
 
-        // Update mission counters and award money
         MissionController.Instance?.PoacherArrested();
+
+        if (currentHealthBar != null)
+            Destroy(currentHealthBar.gameObject);
+
+        if (currentStunIndicator != null)
+            Destroy(currentStunIndicator.gameObject);
 
         Destroy(gameObject);
     }
@@ -192,9 +218,28 @@ public class Poacher : MonoBehaviour
     {
         if (other.CompareTag("Tranquilizer"))
         {
-            // Knock out instantly
-            TakeTranquilizer(health);
+            TakeTranquilizer(1f);
             Destroy(other.gameObject);
         }
+    }
+
+    private void FindNextAnimal()
+    {
+        GameObject[] animals = GameObject.FindGameObjectsWithTag("Animal");
+
+        float closestDistance = Mathf.Infinity;
+        Transform closest = null;
+
+        foreach (GameObject a in animals)
+        {
+            float dist = Vector3.Distance(transform.position, a.transform.position);
+            if (dist < closestDistance)
+            {
+                closestDistance = dist;
+                closest = a.transform;
+            }
+        }
+
+        targetAnimal = closest;
     }
 }

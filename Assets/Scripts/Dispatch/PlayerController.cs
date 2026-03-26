@@ -10,22 +10,36 @@ public class PlayerController : MonoBehaviour
     public float mouseSensitivity = 2f;
     public Transform playerCamera;
 
-    [Header("Arrest")]
+    [Header("Arrest UI")]
+    public GameObject holdEText;          // Parent ArrestText
+    public RectTransform arrestProgressBar; // Green Fill rectangle
+
+    [Header("Arrest Logic")]
     public float arrestRange = 3f;
     public float arrestHoldTime = 2f;
-    public Image arrestProgressBar;
 
-    float verticalRotation;
-    float arrestTimer;
-    Poacher currentTarget;
-
-    CharacterController controller;
+    private float arrestTimer;
+    private Poacher currentTarget;
+    private CharacterController controller;
+    private float verticalRotation;
 
     void Start()
     {
         controller = GetComponent<CharacterController>();
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
+
+        // Hide Arrest UI at start
+        if (holdEText != null)
+            holdEText.SetActive(false);
+
+        // Initialize Fill scale
+        if (arrestProgressBar != null)
+        {
+            Vector3 scale = arrestProgressBar.localScale;
+            scale.x = 0f; // start empty
+            arrestProgressBar.localScale = scale;
+        }
     }
 
     void Update()
@@ -48,8 +62,10 @@ public class PlayerController : MonoBehaviour
     {
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity * 100f * Time.deltaTime;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity * 100f * Time.deltaTime;
+
         verticalRotation -= mouseY;
         verticalRotation = Mathf.Clamp(verticalRotation, -80f, 80f);
+
         playerCamera.localRotation = Quaternion.Euler(verticalRotation, 0f, 0f);
         transform.Rotate(Vector3.up * mouseX);
     }
@@ -58,19 +74,36 @@ public class PlayerController : MonoBehaviour
     {
         FindKnockedOutPoacher();
 
-        if (currentTarget != null && Input.GetKey(KeyCode.E))
+        bool canArrest = currentTarget != null;
+
+        // Show/hide Arrest UI
+        if (holdEText != null)
+            holdEText.SetActive(canArrest);
+
+        if (canArrest)
         {
-            arrestTimer += Time.deltaTime;
+            if (Input.GetKey(KeyCode.E))
+                arrestTimer += Time.deltaTime;
 
+            // Scale Fill to simulate sliding green bar
             if (arrestProgressBar != null)
-                arrestProgressBar.fillAmount = arrestTimer / arrestHoldTime;
+            {
+                float t = Mathf.Clamp01(arrestTimer / arrestHoldTime);
+                Vector3 scale = arrestProgressBar.localScale;
+                scale.x = t; // grows left to right
+                arrestProgressBar.localScale = scale;
+            }
 
+            // Arrest when full
             if (arrestTimer >= arrestHoldTime)
             {
-                // Arrest poacher
                 currentTarget.Arrest();
                 ResetArrest();
             }
+
+            // Reset if E released early
+            if (!Input.GetKey(KeyCode.E))
+                ResetArrest();
         }
         else
         {
@@ -81,7 +114,12 @@ public class PlayerController : MonoBehaviour
     void ResetArrest()
     {
         arrestTimer = 0f;
-        if (arrestProgressBar != null) arrestProgressBar.fillAmount = 0f;
+        if (arrestProgressBar != null)
+        {
+            Vector3 scale = arrestProgressBar.localScale;
+            scale.x = 0f; // reset to empty
+            arrestProgressBar.localScale = scale;
+        }
     }
 
     void FindKnockedOutPoacher()
